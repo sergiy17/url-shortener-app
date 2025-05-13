@@ -1,0 +1,86 @@
+#!/bin/bash
+
+set -e # Exit on any error
+
+# Function to clean up background processes
+cleanup() {
+  echo "Cleaning up..."
+  # Kill background jobs if they exist
+  jobs -p | xargs -r kill 2>/dev/null || true
+  exit 1
+}
+
+# Trap Ctrl+C and EXIT to clean up
+trap cleanup SIGINT SIGTERM EXIT
+
+# Clone and set up Rails backend
+echo "Cloning Rails backend..."
+if ! git clone git@github.com:sergiy17/url-shortener-rails.git; then
+  echo "Failed to clone Rails backend"
+  exit 1
+fi
+
+cd url-shortener-rails
+echo "Installing Ruby gems..."
+if ! bundle install; then
+  echo "Failed to install Ruby gems"
+  cd ..
+  rm -rf url-shortener-rails
+  exit 1
+fi
+
+echo "Setting up Rails database..."
+if ! rails db:setup; then
+  echo "Failed to set up Rails database"
+  cd ..
+  rm -rf url-shortener-rails
+  exit 1
+fi
+
+echo "Starting Rails server in background..."
+rails s -p 3000 & # Run in background
+RAILS_PID=$!
+sleep 2 # Give server time to start
+if ! ps -p $RAILS_PID > /dev/null; then
+  echo "Failed to start Rails server"
+  cd ..
+  rm -rf url-shortener-rails
+  exit 1
+fi
+cd ..
+
+# Clone and set up React frontend
+echo "Cloning React frontend..."
+if ! git clone https://github.com/sergiy17/url-shortener-react.git; then
+  echo "Failed to clone React frontend"
+  rm -rf url-shortener-react
+  exit 1
+fi
+
+cd url-shortener-react
+echo "Installing Node dependencies..."
+if ! npm install; then
+  echo "Failed to install Node dependencies"
+  cd ..
+  rm -rf url-shortener-react
+  exit 1
+fi
+
+echo "Starting React server in background..."
+npm start & # Run in background
+REACT_PID=$!
+sleep 2 # Give server time to start
+if ! ps -p $REACT_PID > /dev/null; then
+  echo "Failed to start React server"
+  cd ..
+  rm -rf url-shortener-react
+  exit 1
+fi
+cd ..
+
+echo "Both servers are running!"
+echo "Rails backend: http://localhost:3000"
+echo "React frontend: http://localhost:3006"
+
+# Wait for background processes to complete
+wait $RAILS_PID $REACT_PID
