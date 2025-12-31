@@ -9,6 +9,7 @@ Apart from the main functionality the link owner will be able to collect the sta
 The short link will not be accessible after 1 month from the last visit etc
 
 
+
 Project setup
 1. Clone the repo with `git clone https://github.com/sergiy17/url-shortener-app.git`
 2. Install dependencies `cd url-shortener-app && script/setup`
